@@ -14,6 +14,21 @@ type Post {
   subreddit_id: ID
   title: String
   username: String
+  comments: [Comment]
+    @materializer(
+      query: "getCommentByPostId"
+      arguments: [{ name: "post_id", field: "id" }]
+    )
+  votes: [Vote]
+    @materializer(
+      query: "getVotesByPostId"
+      arguments: [{ name: "post_id", field: "id" }]
+    )
+  subreddit: [Subreddit]
+    @materializer(
+      query: "getSubredditListById"
+      arguments: [{ name: "id", field: "subreddit_id" }]
+    )
 }
 
 type Subreddit {
@@ -36,6 +51,24 @@ type Query {
       type: "postgresql"
       schema: "public"
       table: "comment"
+      configuration: "postgresql_config"
+    )
+  getCommentByPostId(post_id: ID): [Comment]
+    @dbquery(
+      type: "postgresql"
+      schema: "public"
+      query: """
+      select * from comment where post_id = $1
+      """
+      configuration: "postgresql_config"
+    )
+  getSubredditListById(id: ID): [Subreddit]
+    @dbquery(
+      type: "postgresql"
+      schema: "public"
+      query: """
+      select * from subreddit where id = $1
+      """
       configuration: "postgresql_config"
     )
   """
@@ -77,7 +110,22 @@ type Query {
     @dbquery(
       type: "postgresql"
       schema: "public"
-      table: "post"
+      query: """
+      select * from post order by created_at desc
+      """
+      configuration: "postgresql_config"
+    )
+  getPostListByTopic(topic: String!): [Post]
+    @dbquery(
+      type: "postgresql"
+      schema: "public"
+      query: """
+      select *, po.id as id
+      from post as po
+      join subreddit as sub on sub.id = po.subreddit_id
+      where sub.topic = $1
+      order by po.created_at desc
+      """
       configuration: "postgresql_config"
     )
   getSubredditList: [Subreddit]
@@ -101,6 +149,16 @@ type Query {
       type: "postgresql"
       schema: "public"
       table: "vote"
+      configuration: "postgresql_config"
+    )
+  getVotesByPostId(post_id: ID!): [Vote]
+    @dbquery(
+      type: "postgresql"
+      schema: "public"
+      query: """
+      select * from vote where post_id = $1
+      order by created_at desc
+      """
       configuration: "postgresql_config"
     )
 }

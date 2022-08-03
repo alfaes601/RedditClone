@@ -6,7 +6,7 @@ import { LinkIcon, PhotographIcon } from "@heroicons/react/outline";
 import { useMutation } from "@apollo/client";
 import { ADD_POST, ADD_SUBREDDIT } from "../graphql/mutations";
 import client from "../apollo-client";
-import { GET_SUBREDDIT_BY_TOPIC } from "../graphql/querys";
+import { GET_ALL_POST, GET_SUBREDDIT_BY_TOPIC } from "../graphql/querys";
 import toast from "react-hot-toast";
 
 type FormData = {
@@ -16,9 +16,16 @@ type FormData = {
   subreddit: string;
 };
 
-function PostBox() {
+type Props = {
+  subreddit?: string;
+};
+
+function PostBox({ subreddit }: Props) {
+  console.log("Subreddit en PostBox: " + subreddit);
   const { data: session } = useSession();
-  const [addPost] = useMutation(ADD_POST);
+  const [addPost] = useMutation(ADD_POST, {
+    refetchQueries: [GET_ALL_POST, "getPostList"],
+  });
   const [addSubreddit] = useMutation(ADD_SUBREDDIT);
   const [imageBoxOpen, setImageBoxOpen] = useState<boolean>(false);
   const {
@@ -35,16 +42,18 @@ function PostBox() {
 
     try {
       //query for the subreddit topic
+      console.log("try subreddit: " + subreddit);
       const {
         data: { getSubredditListByTopic },
       } = await client.query({
         query: GET_SUBREDDIT_BY_TOPIC,
         variables: {
-          topic: formData.subreddit,
+          topic: subreddit || formData.subreddit,
         },
       });
 
       const subredditExists = getSubredditListByTopic.length > 0;
+
       if (!subredditExists) {
         console.log("subreddit is new -> created a new subreddit");
         const {
@@ -106,7 +115,7 @@ function PostBox() {
 
   return (
     <form
-      className="sticky top-16 z-50 rounded-md border border-gray-300 bg-white p-2"
+      className="sticky top-20 z-50 rounded-md border border-gray-300 bg-white p-2"
       onSubmit={onSubmit}
     >
       <div className="flex items-center space-x-3">
@@ -118,7 +127,13 @@ function PostBox() {
           className="flex-1 bg-gray-50 p-2 pl-5 outline-none"
           disabled={!session}
           type="text"
-          placeholder={session ? "Create a post" : "Sign in to post"}
+          placeholder={
+            session
+              ? subreddit
+                ? `Create a post in r/${subreddit}`
+                : "Create a post"
+              : "Sign in to post"
+          }
         />
         <PhotographIcon
           onClick={() => setImageBoxOpen(!imageBoxOpen)}
@@ -141,15 +156,17 @@ function PostBox() {
             />
           </div>
 
-          <div className="flex items-center px-2">
-            <p className="min-w-[90px]">Subreddit:</p>
-            <input
-              {...register("subreddit", { required: true })}
-              className="m-2 flex-1 bg-blue-50 p-2 outline-none"
-              type="text"
-              placeholder="i.e. reactjs"
-            />
-          </div>
+          {!subreddit && (
+            <div className="flex items-center px-2">
+              <p className="min-w-[90px]">Subreddit:</p>
+              <input
+                {...register("subreddit", { required: true })}
+                className="m-2 flex-1 bg-blue-50 p-2 outline-none"
+                type="text"
+                placeholder="i.e. reactjs"
+              />
+            </div>
+          )}
 
           {imageBoxOpen && (
             <div className="flex items-center px-2">
