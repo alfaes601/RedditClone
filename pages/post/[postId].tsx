@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@apollo/client";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import React from "react";
-import { SubmitErrorHandler, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import Timeago from "react-timeago";
 import Avatar from "../../components/Avatar";
@@ -30,12 +30,11 @@ function PostPage() {
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<FormData>();
+  } = useForm();
 
-  const onSubmit: SubmitErrorHandler<FormData> = async (data) => {
+  const onSubmit = handleSubmit(async (data) => {
     //post comment here
     const notification = toast.loading("Posting your comment...");
-
     await addComment({
       variables: {
         post_id: router.query.postId,
@@ -49,7 +48,7 @@ function PostPage() {
     toast.success("Comment successfully comment!", {
       id: notification,
     });
-  };
+  });
 
   return (
     <div className="mx-auto my-7 max-w-5xl">
@@ -58,10 +57,7 @@ function PostPage() {
         <p className="text-sm">
           Comment as <span className="text-red-500">{session?.user?.name}</span>
         </p>
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col space-y-2"
-        >
+        <form onSubmit={onSubmit} className="flex flex-col space-y-2">
           <textarea
             {...register("comment")}
             disabled={!session}
@@ -81,28 +77,26 @@ function PostPage() {
       </div>
       <div className="-my-5 rounded-b-md border border-t-0 border-gray-300 bg-white py-5 px-10">
         <hr className="py-2" />
-        {post?.comments?.map((comment) => {
-          return (
-            <div
-              className="relative flex items-center space-x-2 space-y-5"
-              key={comment.id}
-            >
-              <hr className="absolute top-10 left-7 z-0 h-16 border" />
-              <div className="z-50">
-                <Avatar seed={comment.username} />
-              </div>
-              <div className="flex flex-col">
-                <p className="py-2 text-xs text-gray-400">
-                  <span className="font-semibold text-gray-600">
-                    {comment.username}
-                  </span>{" "}
-                  <Timeago date={comment.created_at} />
-                </p>
-                <p>{comment.text}</p>
-              </div>
+        {post?.comments?.map((c) => (
+          <div
+            className="relative flex items-center space-x-2 space-y-5"
+            key={c.id}
+          >
+            <hr className="absolute top-10 left-7 z-0 h-16 border" />
+            <div className="z-50">
+              <Avatar seed={c.username} />
             </div>
-          );
-        })}
+            <div className="flex flex-col">
+              <p className="py-2 text-xs text-gray-400">
+                <span className="font-semibold text-gray-600">
+                  {c.username}
+                </span>{" "}
+                <Timeago date={c.created_at} />
+              </p>
+              <p>{c.text}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
